@@ -11,6 +11,8 @@ import {
   TouchableOpacityProps,
   Modal,
   TouchableOpacity,
+  Alert,
+  ToastAndroid,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Shadow } from 'react-native-shadow-2';
@@ -24,6 +26,7 @@ import { addCard, updateCard } from '../data/cards';
 import { Card } from '../types';
 import { useTranslation } from 'react-i18next';
 import NfcManager, {NfcTech} from 'react-native-nfc-manager';
+import { encode, decode } from '../data/KeyManager';
 
 type TextFieldProps = TextInputProps & {
   title: string;
@@ -42,20 +45,6 @@ const generateRandomCardNumber = () => {
 
   return `02FE${getRandom4Byte()}${getRandom4Byte()}${getRandom4Byte()}`;
 };
-
-NfcManager.start();
-async function readNdef() {
-  console.log('Scan scard pressed');  
-  try {
-    // register for the NFC tag with NDEF in it
-    await NfcManager.requestTechnology(NfcTech.NfcF);
-    // the resolved tag object will contain `ndefMessage` property
-    const tag = await NfcManager.getTag();
-    console.warn('Tag found', tag);
-  } catch (ex) {
-    console.warn('Oops!', ex);
-  }
-}
 
 const Container = styled.KeyboardAvoidingView`
   flex: 1;
@@ -164,9 +153,30 @@ const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
   const initialData = props.route.params?.card ?? undefined;
   const [scanModalVisible, setScanModalVisible] = useState(false);
 
+  async function readCard() {
+    try {
+      // register for the NFC tag with NDEF in it
+      await NfcManager.requestTechnology(NfcTech.NfcF);
+      // the resolved tag object will contain `ndefMessage` property
+      const tag = await NfcManager.getTag();
+      const ICTag = encode(tag.id);
+      console.log('Card Read: ' + ICTag);
+      setScanModalVisible(false);
+      ToastAndroid.show('Tag Scanned Successfuuly: ' + ICTag, ToastAndroid.SHORT);
+    } catch (ex) {
+      console.warn('Oops!', ex);
+    }
+  }
+
   useEffect(() => {
     if (scanModalVisible) {
-      readNdef();
+      console.log('init nfc scan');
+      NfcManager.start();
+      readCard();
+    }
+    if (!scanModalVisible) {
+      console.log('stop nfc scan');
+      NfcManager.cancelTechnologyRequest();
     }
   }, [scanModalVisible]);
 
@@ -306,7 +316,7 @@ const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <Text>{t('card_edit.trigger_scan')}</Text>
-              <TouchableOpacity onPress={() => {setScanModalVisible(false); NfcManager.cancelTechnologyRequest(); }} style={styles.closeButton}>
+              <TouchableOpacity onPress={() => {setScanModalVisible(false) }} style={styles.closeButton}>
                 <Text>{t('card_edit.scan_close')}</Text>
               </TouchableOpacity>
             </View>
