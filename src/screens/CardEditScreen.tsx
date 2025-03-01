@@ -9,6 +9,8 @@ import {
   TextInputFocusEventData,
   NativeSyntheticEvent,
   TouchableOpacityProps,
+  Modal,
+  TouchableOpacity,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Shadow } from 'react-native-shadow-2';
@@ -21,11 +23,14 @@ import CardView from '../components/Card';
 import { addCard, updateCard } from '../data/cards';
 import { Card } from '../types';
 import { useTranslation } from 'react-i18next';
+import NfcManager, {NfcTech} from 'react-native-nfc-manager';
 
 type TextFieldProps = TextInputProps & {
   title: string;
   containerStyle?: ViewStyle;
 };
+
+import { useEffect } from 'react';
 
 const generateRandomCardNumber = () => {
   const getRandom4Byte = () => {
@@ -37,6 +42,20 @@ const generateRandomCardNumber = () => {
 
   return `02FE${getRandom4Byte()}${getRandom4Byte()}${getRandom4Byte()}`;
 };
+
+NfcManager.start();
+async function readNdef() {
+  console.log('Scan scard pressed');  
+  try {
+    // register for the NFC tag with NDEF in it
+    await NfcManager.requestTechnology(NfcTech.NfcF);
+    // the resolved tag object will contain `ndefMessage` property
+    const tag = await NfcManager.getTag();
+    console.warn('Tag found', tag);
+  } catch (ex) {
+    console.warn('Oops!', ex);
+  }
+}
 
 const Container = styled.KeyboardAvoidingView`
   flex: 1;
@@ -143,6 +162,13 @@ type CardEditScreenProps = NativeStackScreenProps<RootStackParams, 'Edit'>;
 const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
   const { t } = useTranslation();
   const initialData = props.route.params?.card ?? undefined;
+  const [scanModalVisible, setScanModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (scanModalVisible) {
+      readNdef();
+    }
+  }, [scanModalVisible]);
 
   const [mode] = useState<'add' | 'edit'>(() => {
     return initialData ? 'edit' : 'add';
@@ -260,9 +286,33 @@ const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
 
         <Button
           onPress={save}
-          containerStyle={styles.saveButton}
+          containerStyle={styles.genericButtons}
           text={t('card_edit.save')}
         />
+
+        <Button
+          onPress={() => setScanModalVisible(true)}
+          containerStyle={styles.genericButtons}
+          text={t('card_edit.scan')}
+        />
+
+        {/*modals*/}
+        <Modal
+          animationType='fade'
+          transparent={true}
+          visible={scanModalVisible}
+          onRequestClose={() => setScanModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text>{t('card_edit.trigger_scan')}</Text>
+              <TouchableOpacity onPress={() => {setScanModalVisible(false); NfcManager.cancelTechnologyRequest(); }} style={styles.closeButton}>
+                <Text>{t('card_edit.scan_close')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        
       </ScrollView>
     </Container>
   );
@@ -284,11 +334,36 @@ const styles = StyleSheet.create({
   buttonBorderRadius: {
     borderRadius: 8,
   },
-  saveButton: {
+  genericButtons: {
     marginTop: 32,
   },
   cardNumberChangeButton: {
     marginTop: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  modalContent: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'grey',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#28a745',
+    borderRadius: 5,
+  },
+  closeButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#dc3545',
+    borderRadius: 5,
   },
 });
 

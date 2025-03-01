@@ -36,6 +36,9 @@
     "card_name": "Card Name",
     "card_number": "Card Number",
     "change_card_number": "Change card number",
-    "save": "Save"
+    "save": "Save",
+    "scan": "Scan Card",
+    "trigger_scan": "Please Tap your IC card on the reader now",
+    "scan_close": "Cancel Scanning"
   }
 }

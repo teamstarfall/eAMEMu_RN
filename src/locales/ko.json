@@ -36,6 +36,10 @@
     "card_name": "카드 이름",
     "card_number": "카드 번호",
     "change_card_number": "카드 번호 변경",
-    "save": "저장"
+    "save": "저장",
+    "scan": "Scan Card",
+    "trigger_scan": "Please Tap your IC card on the reader",
+    "scan_close": "Close"
+    
   }
 }
